@@ -91,13 +91,18 @@ func (s *Store) UpsertDiscovered(ctx context.Context, a model.Asset, initialIgno
 	}
 	res, err := s.db.ExecContext(ctx, `INSERT INTO assets (id, original_name, mime_type, checksum, byte_size, asset_created_at, asset_updated_at, state, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET original_name=excluded.original_name, mime_type=excluded.mime_type, checksum=excluded.checksum, byte_size=excluded.byte_size, asset_updated_at=excluded.asset_updated_at, updated_at=excluded.updated_at`,
+ON CONFLICT(id) DO NOTHING`,
 		a.ID, a.OriginalName, a.MIMEType, a.Checksum, a.ByteSize, timestamp(a.CreatedAt), timestamp(a.UpdatedAt), state, now(), now())
 	if err != nil {
 		return false, err
 	}
 	n, err := res.RowsAffected()
-	return n == 1, err
+	if err != nil || n == 1 {
+		return n == 1, err
+	}
+	_, err = s.db.ExecContext(ctx, `UPDATE assets SET original_name=?, mime_type=?, checksum=?, byte_size=?, asset_updated_at=?, updated_at=? WHERE id=?`,
+		a.OriginalName, a.MIMEType, a.Checksum, a.ByteSize, timestamp(a.UpdatedAt), now(), a.ID)
+	return false, err
 }
 
 func (s *Store) NextTransfer(ctx context.Context, at time.Time) (*model.Asset, error) {
@@ -146,6 +151,18 @@ func (s *Store) MarkFailed(ctx context.Context, id string, attempt, maxAttempts 
 	}
 	_, err := s.db.ExecContext(ctx, `UPDATE assets SET state=?, last_error=?, next_retry_at=?, updated_at=? WHERE id=? AND state=?`, state, message, nullTime(next), now(), id, model.StateTransferring)
 	return err
+}
+
+// Requeue releases a leased transfer when a pass must pause (for example, the
+// phone is low on storage). It deliberately retains the prior error context.
+func (s *Store) Requeue(ctx context.Context, id string, cause string) error {
+	return s.transition(ctx, id, []model.State{model.StateTransferring}, model.StateQueued, `last_error=?`, cause)
+}
+
+// MarkUnsupported records an asset that the initial relay cannot safely place
+// on Android. It remains visible to the user and is never silently dropped.
+func (s *Store) MarkUnsupported(ctx context.Context, id, reason string) error {
+	return s.transition(ctx, id, []model.State{model.StateQueued}, model.StateFailed, `last_error=?, next_retry_at=NULL`, reason)
 }
 
 func (s *Store) RetryFailed(ctx context.Context) (int64, error) {
@@ -205,6 +222,36 @@ func (s *Store) MarkLocalRemoved(ctx context.Context, id string) error {
 func (s *Store) MarkBatchCleaned(ctx context.Context, id string) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE batches SET cleaned_at=? WHERE id=? AND confirmed_at IS NOT NULL`, now(), id)
 	return err
+}
+
+func (s *Store) ListBatches(ctx context.Context) ([]model.Batch, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, created_at, confirmed_at, cleaned_at, notes FROM batches ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var batches []model.Batch
+	for rows.Next() {
+		var b model.Batch
+		var created string
+		var confirmed, cleaned sql.NullString
+		if err := rows.Scan(&b.ID, &created, &confirmed, &cleaned, &b.Notes); err != nil {
+			return nil, err
+		}
+		b.CreatedAt, _ = time.Parse(time.RFC3339Nano, created)
+		if confirmed.Valid {
+			if t, err := time.Parse(time.RFC3339Nano, confirmed.String); err == nil {
+				b.ConfirmedAt = &t
+			}
+		}
+		if cleaned.Valid {
+			if t, err := time.Parse(time.RFC3339Nano, cleaned.String); err == nil {
+				b.CleanedAt = &t
+			}
+		}
+		batches = append(batches, b)
+	}
+	return batches, rows.Err()
 }
 
 func (s *Store) List(ctx context.Context, state string) ([]model.Asset, error) {
