@@ -202,8 +202,20 @@ func (a *ADB) resolve(ctx context.Context) (string, string, string, error) {
 	if len(devices) == 0 {
 		return "", "", "", errors.New("no Android devices found; connect a device and enable USB debugging")
 	}
+	var authorized []Info
+	for _, device := range devices {
+		if device.State == "device" {
+			authorized = append(authorized, device)
+		}
+	}
+	if len(authorized) == 1 {
+		return authorized[0].Serial, authorized[0].State, authorized[0].Description, nil
+	}
+	if len(authorized) > 1 {
+		return "", "", "", errors.New("more than one authorized Android device is connected; set android.device_serial")
+	}
 	if len(devices) != 1 {
-		return "", "", "", errors.New("more than one Android device is connected; set android.device_serial")
+		return "", "", "", errors.New("no authorized Android device is connected; set android.device_serial after connecting or authorizing one")
 	}
 	return devices[0].Serial, devices[0].State, devices[0].Description, nil
 }

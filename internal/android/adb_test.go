@@ -1,6 +1,9 @@
 package android
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -61,5 +64,21 @@ func TestValidateNetworkEndpoint(t *testing.T) {
 		if err := validateNetworkEndpoint(endpoint); err == nil {
 			t.Fatalf("%q accepted", endpoint)
 		}
+	}
+}
+
+func TestResolveAutoSelectsTheOnlyAuthorizedDevice(t *testing.T) {
+	dir := t.TempDir()
+	adb := filepath.Join(dir, "adb")
+	script := "#!/bin/sh\nprintf '%s\\n' 'List of devices attached' 'usb-device no permissions; see [https://developer.android.com/tools/adb]' '192.168.1.20:37123 device product:test'\n"
+	if err := os.WriteFile(adb, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	serial, state, _, err := New(adb, "auto").resolve(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if serial != "192.168.1.20:37123" || state != "device" {
+		t.Fatalf("resolved %q in state %q", serial, state)
 	}
 }

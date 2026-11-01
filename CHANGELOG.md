@@ -2,6 +2,13 @@
 
 All notable changes to Immich Relay are documented here.
 
+## [0.1.4] - 2026-11-01
+
+### Fixed
+
+- Make automatic device selection choose the single authorized ADB device even
+  when a second USB device is present but blocked by Linux USB permissions.
+
 ## [0.1.3] - 2026-11-01
 
 ### Added

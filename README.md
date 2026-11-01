@@ -47,7 +47,7 @@ On Arch Linux (and other Linux distributions), the same static `x86_64` or
 user-local curl installer is also available:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ifeelsam/immich-relay/main/scripts/install.sh | sh -s -- 0.1.3
+curl -fsSL https://raw.githubusercontent.com/ifeelsam/immich-relay/main/scripts/install.sh | sh -s -- 0.1.4
 ```
 
 It installs to `~/.local/bin`; change that with `IMMICH_RELAY_PREFIX`. The
@@ -92,7 +92,7 @@ Debian (`.deb`) and RPM packages are built by GoReleaser when a release is made.
    immich-relay setup
    ```
 
-The wizard validates the Immich API key, reports the device model and Android version, checks available storage, writes `~/.config/immich-relay/config.yaml`, stores the API key in a mode-`0600` file, initializes SQLite state, and can enable a systemd user service.
+The wizard validates the Immich API key, reports the device model and Android version, checks available storage, writes `~/.config/immich-relay/config.yaml`, stores the API key in a mode-`0600` file, initializes SQLite state, and can enable a systemd user service. With `device_serial: auto`, Relay selects exactly one authorized ADB device and ignores disconnected, unauthorized, or USB-permission-blocked entries.
 
 The default first-run mode is `new-only`: Relay performs an explicit metadata baseline and ignores existing library items. Choose `full` if you want the whole current library. `after-date` accepts an RFC3339 timestamp.
 
