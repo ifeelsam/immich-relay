@@ -35,8 +35,7 @@ The binary is standalone. ADB is intentionally the only external runtime depende
 
 For the full first-run guide—including local Immich URLs, Android storage
 paths, the curl installer, Arch USB permissions, and Wireless debugging—see
-[Setup and troubleshooting](docs/Setup-and-Troubleshooting.md) or the
-[GitHub Wiki](https://github.com/ifeelsam/immich-relay/wiki/Setup-and-troubleshooting).
+[Setup and troubleshooting](docs/Setup-and-Troubleshooting.md).
 
 ## Install
 
