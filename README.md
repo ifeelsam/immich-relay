@@ -42,6 +42,18 @@ tar -xzf immich-relay_*_Linux_x86_64.tar.gz
 install -Dm755 immich-relay ~/.local/bin/immich-relay
 ```
 
+On Arch Linux (and other Linux distributions), the same static `x86_64` or
+`aarch64` archive works directly. Once a release is published, a verified
+user-local curl installer is also available:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/immich-relay/immich-relay/main/scripts/install.sh | sh -s -- 0.1.0
+```
+
+It installs to `~/.local/bin`; change that with `IMMICH_RELAY_PREFIX`. The
+installer verifies the selected archive against that release's `checksums.txt`
+before installing it.
+
 For a development build, Go 1.26 or newer is required:
 
 ```bash
