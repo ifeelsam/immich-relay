@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os/exec"
 	"path"
 	"regexp"
@@ -14,7 +15,7 @@ import (
 	"github.com/immich-relay/immich-relay/internal/model"
 )
 
-var serialPattern = regexp.MustCompile(`^[A-Za-z0-9:._-]+$`)
+var serialPattern = regexp.MustCompile(`^[A-Za-z0-9:._\-\[\]]+$`)
 
 // Device is the Android boundary used by the engine; it is straightforward to
 // fake in tests and never needs a real phone.
@@ -57,12 +58,25 @@ func (a *ADB) Info(ctx context.Context) (Info, error) {
 	}
 	info := Info{Serial: serial, State: state, Authorized: state == "device", Description: description}
 	if !info.Authorized {
-		return info, fmt.Errorf("Android device %s is %s; unlock it and authorize USB debugging", serial, state)
+		return info, deviceStateError(serial, state)
 	}
 	model, _ := a.shell(ctx, "getprop ro.product.model")
 	version, _ := a.shell(ctx, "getprop ro.build.version.release")
 	info.Model, info.Android = strings.TrimSpace(model), strings.TrimSpace(version)
 	return info, nil
+}
+
+// Connect asks the local ADB server to connect to a phone already paired for
+// wireless debugging. Pairing is deliberately left to `adb pair`, which keeps
+// the short-lived pairing code out of Relay configuration and process logs.
+func (a *ADB) Connect(ctx context.Context, endpoint string) error {
+	if err := validateNetworkEndpoint(endpoint); err != nil {
+		return err
+	}
+	if _, err := exec.CommandContext(ctx, a.Binary, "connect", endpoint).CombinedOutput(); err != nil {
+		return fmt.Errorf("connect to Android device %s: %w", endpoint, err)
+	}
+	return nil
 }
 
 func (a *ADB) Storage(ctx context.Context) (model.StorageInfo, error) {
@@ -173,14 +187,7 @@ func (a *ADB) resolve(ctx context.Context) (string, string, string, error) {
 	if err != nil {
 		return "", "", "", fmt.Errorf("run adb devices: %w", err)
 	}
-	var devices []Info
-	for _, line := range strings.Split(string(out), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 2 || strings.HasPrefix(fields[0], "List") {
-			continue
-		}
-		devices = append(devices, Info{Serial: fields[0], State: fields[1], Description: strings.Join(fields[2:], " ")})
-	}
+	devices := parseDevices(string(out))
 	if a.Serial != "" && a.Serial != "auto" {
 		if !serialPattern.MatchString(a.Serial) {
 			return "", "", "", errors.New("invalid ADB device serial")
@@ -207,7 +214,7 @@ func (a *ADB) command(ctx context.Context, args ...string) (string, error) {
 		return "", err
 	}
 	if state != "device" {
-		return "", fmt.Errorf("Android device %s is %s; authorize USB debugging", serial, state)
+		return "", deviceStateError(serial, state)
 	}
 	args = append([]string{"-s", serial}, args...)
 	out, err := exec.CommandContext(ctx, a.Binary, args...).CombinedOutput()
@@ -215,6 +222,49 @@ func (a *ADB) command(ctx context.Context, args ...string) (string, error) {
 		return "", fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
 	}
 	return string(out), nil
+}
+
+func parseDevices(output string) []Info {
+	var devices []Info
+	for _, line := range strings.Split(output, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 || strings.HasPrefix(fields[0], "List") {
+			continue
+		}
+		state, description := fields[1], strings.Join(fields[2:], " ")
+		// `adb devices` represents this host-side USB/udev failure as two
+		// columns: "no permissions; ...". Keep it as one actionable state.
+		if state == "no" && len(fields) >= 3 && strings.HasPrefix(fields[2], "permissions") {
+			state, description = "no permissions", strings.Join(fields[2:], " ")
+		}
+		devices = append(devices, Info{Serial: fields[0], State: state, Description: description})
+	}
+	return devices
+}
+
+func deviceStateError(serial, state string) error {
+	switch state {
+	case "no permissions":
+		return fmt.Errorf("Android device %s is visible, but this Linux user cannot access it; install your distribution's Android USB udev rules and reconnect, or use wireless debugging", serial)
+	case "unauthorized":
+		return fmt.Errorf("Android device %s is unauthorized; unlock it and accept the USB debugging authorization", serial)
+	case "offline":
+		return fmt.Errorf("Android device %s is offline; reconnect it or reconnect ADB", serial)
+	default:
+		return fmt.Errorf("Android device %s is %s; authorize USB debugging", serial, state)
+	}
+}
+
+func validateNetworkEndpoint(value string) error {
+	host, port, err := net.SplitHostPort(value)
+	if err != nil || host == "" || port == "" {
+		return errors.New("wireless Android address must be host:port")
+	}
+	n, err := strconv.ParseUint(port, 10, 16)
+	if err != nil || n == 0 {
+		return errors.New("wireless Android port must be between 1 and 65535")
+	}
+	return nil
 }
 
 func (a *ADB) shell(ctx context.Context, command string) (string, error) {

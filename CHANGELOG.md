@@ -2,6 +2,18 @@
 
 All notable changes to Immich Relay are documented here.
 
+## [0.1.3] - 2026-11-01
+
+### Added
+
+- `immich-relay device connect <host:port>` for Android Wireless debugging
+  devices that have already been paired with `adb pair`.
+
+### Fixed
+
+- Parse ADB's `no permissions` state correctly and report the Linux USB/udev
+  remediation instead of incorrectly telling users to unlock the phone.
+
 ## [0.1.2] - 2026-11-01
 
 ### Fixed

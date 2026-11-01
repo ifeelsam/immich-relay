@@ -1,6 +1,6 @@
 # Maintainer: Immich Relay contributors
 pkgname=immich-relay
-pkgver=0.1.2
+pkgver=0.1.3
 pkgrel=1
 pkgdesc='Safely relay Immich originals to Android over ADB'
 arch=('x86_64' 'aarch64')

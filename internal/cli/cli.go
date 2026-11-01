@@ -399,6 +399,13 @@ func batchCommand(o *options) *cobra.Command {
 
 func deviceCommand(o *options) *cobra.Command {
 	d := &cobra.Command{Use: "device", Short: "Inspect Android device connectivity"}
+	d.AddCommand(&cobra.Command{Use: "connect <host:port>", Short: "Connect an already-paired Android device over Wi-Fi", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if err := android.New(o.adbBinary, "").Connect(cmd.Context(), args[0]); err != nil {
+			return err
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "✓ Connected to Android device at %s\n", args[0])
+		return nil
+	}})
 	d.AddCommand(&cobra.Command{Use: "info", Short: "Show Android connection and storage", RunE: func(cmd *cobra.Command, _ []string) error {
 		c, err := config.Load(o.configPath)
 		if err != nil {

@@ -1,6 +1,6 @@
 # Immich Relay
 
-Immich Relay is a small Linux daemon that copies **original** media from an [Immich](https://immich.app/) library to an Android phone attached by USB. Google Photos on that phone can then back up the copied media using its normal Android backup flow.
+Immich Relay is a small Linux daemon that copies **original** media from an [Immich](https://immich.app/) library to an Android phone over ADB, either by USB or wireless debugging. Google Photos on that phone can then back up the copied media using its normal Android backup flow.
 
 It is deliberately a relay, not a second cloud uploader. Immich remains the source of truth. Relay never deletes or modifies Immich assets, and it never claims a file is in Google Photos just because it reached the phone.
 
@@ -8,7 +8,7 @@ It is deliberately a relay, not a second cloud uploader. Immich remains the sour
 Camera / phone / imports
           │
           ▼
-      Immich server ── original bytes ──► Immich Relay ── ADB/USB ──► Android
+      Immich server ── original bytes ──► Immich Relay ── ADB (USB/Wi-Fi) ──► Android
                                                                           │
                                                               Google Photos backup
 ```
@@ -28,7 +28,7 @@ No non-root Android mechanism can prove that Google Photos has uploaded every in
 
 - A 64-bit Linux machine (`x86_64` or `aarch64`)
 - An Immich API key with permission to read your library
-- Android Platform Tools (`adb`), USB debugging enabled, and an authorized USB connection
+- Android Platform Tools (`adb`) and either an authorized USB-debugging connection or an Android wireless-debugging connection
 - Google Photos configured on the phone to back up the `ImmichRelay` device folder
 
 The binary is standalone. ADB is intentionally the only external runtime dependency.
@@ -47,7 +47,7 @@ On Arch Linux (and other Linux distributions), the same static `x86_64` or
 user-local curl installer is also available:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ifeelsam/immich-relay/main/scripts/install.sh | sh -s -- 0.1.2
+curl -fsSL https://raw.githubusercontent.com/ifeelsam/immich-relay/main/scripts/install.sh | sh -s -- 0.1.3
 ```
 
 It installs to `~/.local/bin`; change that with `IMMICH_RELAY_PREFIX`. The
@@ -82,7 +82,9 @@ Debian (`.deb`) and RPM packages are built by GoReleaser when a release is made.
 
 ## First-time setup
 
-1. On Android, enable **Developer options → USB debugging**. Connect the phone, accept its RSA authorization dialog, and check it with `adb devices -l`.
+1. Choose one Android connection method:
+   - **USB:** Enable **Developer options → USB debugging**, connect the phone, accept its RSA authorization dialog, and check it with `adb devices -l`.
+   - **Wireless (Android 11+):** Enable **Developer options → Wireless debugging**, choose **Pair device with pairing code**, then run `adb pair <phone-ip>:<pairing-port>` and enter the displayed code. Connect to the separate debug port with `immich-relay device connect <phone-ip>:<debug-port>`, then confirm it with `adb devices -l`.
 2. In Google Photos, turn on backup and enable its **Back up device folders** setting for `ImmichRelay`. Google may change this UI; verify with a small test image before a large transfer.
 3. Run the wizard:
 
@@ -172,8 +174,9 @@ loginctl enable-linger "$USER"
 ## Troubleshooting
 
 - **`no Android devices found`**: use a data-capable cable, enable USB debugging, then run `adb kill-server && adb devices -l` and authorize the host on the unlocked phone.
+- **`no permissions`**: the phone is visible but Linux USB permissions are blocking ADB before Android can ask for authorization. Install your distribution's Android udev rules, reconnect the phone, and run `adb devices -l` again. On Arch, the `android-udev` rules package is the usual fix; alternatively use Wireless debugging.
 - **`unauthorized`**: revoke USB debugging authorizations on Android, reconnect, and accept the new fingerprint prompt.
-- **ADB permissions on Linux**: install the distribution's Android platform-tools package. Some distributions also require a udev rule or membership in `plugdev`; follow their current package documentation, then reconnect.
+- **Wireless connection dropped**: reconnect with `immich-relay device connect <phone-ip>:<debug-port>`. Android may require pairing again after network changes or a reboot.
 - **`STORAGE_LOW`**: Relay pauses new transfers without losing the queue. Free space, wait for Google Photos/Smart Storage as appropriate, and run again.
 - **Google Photos does not show a file**: wait briefly and check the folder's backup setting. Relay invokes Android's public media scanner broadcast, but OEM restrictions or Android changes may prevent immediate indexing. Relay reports the transfer as awaiting confirmation, never as backed up.
 - **Unsupported files**: use `immich-relay queue list --state FAILED`; formats are retained as visible failures rather than silently discarded.
