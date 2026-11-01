@@ -23,6 +23,16 @@ func TestConfigRequiresImmichURL(t *testing.T) {
 	}
 }
 
+func TestConfigAllowsLocalImmichURLs(t *testing.T) {
+	for _, serverURL := range []string{"http://localhost:2283", "http://192.168.1.20:2283", "https://photos.example.test"} {
+		c := Defaults()
+		c.Immich.URL = serverURL
+		if err := c.Validate(); err != nil {
+			t.Fatalf("Validate(%q): %v", serverURL, err)
+		}
+	}
+}
+
 func TestConfigAllowsAndroidInternalStorageAlias(t *testing.T) {
 	c := Defaults()
 	c.Immich.URL = "https://photos.example.test"

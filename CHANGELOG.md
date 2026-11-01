@@ -2,6 +2,13 @@
 
 All notable changes to Immich Relay are documented here.
 
+## [0.1.2] - 2026-11-01
+
+### Fixed
+
+- Accept valid local Immich origins such as `http://localhost:2283` and LAN IP
+  addresses with a port during setup and configuration validation.
+
 ## [0.1.1] - 2026-11-01
 
 ### Fixed

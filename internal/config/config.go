@@ -133,7 +133,10 @@ func (c Config) Validate() error {
 	if c.Immich.URL == "" {
 		return errors.New("immich.url is required")
 	}
-	u, err := url.ParseRequestURI(c.Immich.URL)
+	// ParseRequestURI intentionally treats an absolute URL as a request target
+	// and leaves Host empty. Parse is the correct validator for server origins,
+	// including local Immich installations such as http://localhost:2283.
+	u, err := url.Parse(c.Immich.URL)
 	if err != nil || u.Scheme == "" || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
 		return errors.New("immich.url must be an absolute http(s) URL")
 	}

@@ -47,7 +47,7 @@ On Arch Linux (and other Linux distributions), the same static `x86_64` or
 user-local curl installer is also available:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ifeelsam/immich-relay/main/scripts/install.sh | sh -s -- 0.1.1
+curl -fsSL https://raw.githubusercontent.com/ifeelsam/immich-relay/main/scripts/install.sh | sh -s -- 0.1.2
 ```
 
 It installs to `~/.local/bin`; change that with `IMMICH_RELAY_PREFIX`. The

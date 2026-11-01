@@ -1,6 +1,6 @@
 # Maintainer: Immich Relay contributors
 pkgname=immich-relay-bin
-pkgver=0.1.1
+pkgver=0.1.2
 pkgrel=1
 pkgdesc='Prebuilt Immich Relay binary for Android ADB syncing'
 arch=('x86_64' 'aarch64')
