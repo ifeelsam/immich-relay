@@ -97,12 +97,12 @@ func (a *ADB) PushAtomic(ctx context.Context, local, destination string) error {
 		return err
 	}
 	temporary := destination + ".immich-relay-partial"
-	if _, err := a.command(ctx, "push", "--", local, temporary); err != nil {
+	if _, err := a.command(ctx, "push", local, temporary); err != nil {
 		return fmt.Errorf("adb push: %w", err)
 	}
 	// -n protects a user-created collision. The engine verifies the resulting
 	// destination afterwards, so a failed no-clobber rename cannot be accepted.
-	if _, err := a.shell(ctx, "mv -n "+shellQuote(temporary)+" "+shellQuote(destination)); err != nil {
+	if _, err := a.shell(ctx, "mv -n "+shellQuote(temporary)+" "+shellQuote(destination)+"; status=$?; rm -f -- "+shellQuote(temporary)+"; exit $status"); err != nil {
 		return fmt.Errorf("finalize Android transfer: %w", err)
 	}
 	return nil

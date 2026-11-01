@@ -147,7 +147,9 @@ func (s *Store) MarkFailed(ctx context.Context, id string, attempt, maxAttempts 
 	message := sanitizeError(cause)
 	if attempt >= maxAttempts {
 		message = "retry limit reached: " + message
-		next = time.Time{}
+		// Keep a terminal failure visible but do not hot-loop it. `queue retry`
+		// explicitly clears this timestamp when the operator wants another try.
+		next = time.Now().UTC().AddDate(100, 0, 0)
 	}
 	_, err := s.db.ExecContext(ctx, `UPDATE assets SET state=?, last_error=?, next_retry_at=?, updated_at=? WHERE id=? AND state=?`, state, message, nullTime(next), now(), id, model.StateTransferring)
 	return err

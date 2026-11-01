@@ -1,0 +1,22 @@
+# Copy this file to ~/.config/immich-relay/config.yaml or use `immich-relay setup`.
+immich:
+  url: "https://photos.example.com"
+  api_key_file: "~/.config/immich-relay/api-key"
+android:
+  device_serial: "auto"
+  destination: "/sdcard/DCIM/ImmichRelay"
+sync:
+  interval: "5m"
+  initial_mode: "new-only"
+  transfer_concurrency: 1
+  retry_attempts: 5
+  reconciliation_interval: "24h"
+storage:
+  min_free_space_gb: 20
+  max_batch_size_gb: 15
+  pause_when_low: true
+cleanup:
+  strategy: "manual-confirmation"
+  use_smart_storage: false
+logging:
+  level: "info"

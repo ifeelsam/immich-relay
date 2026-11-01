@@ -1,0 +1,32 @@
+# Maintainer: Immich Relay contributors
+pkgname=immich-relay
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Safely relay Immich originals to Android over ADB'
+arch=('x86_64' 'aarch64')
+url='https://github.com/immich-relay/immich-relay'
+license=('MIT')
+depends=('android-tools')
+makedepends=('git' 'go')
+source=("git+${url}.git#tag=v${pkgver}")
+b2sums=('SKIP')
+
+build() {
+  cd "${srcdir}/${pkgname}"
+  export CGO_ENABLED=0
+  go build -trimpath -buildmode=pie -ldflags "-s -w -X main.version=${pkgver}" -o "${pkgname}" ./cmd/immich-relay
+}
+
+check() {
+  cd "${srcdir}/${pkgname}"
+  go test ./...
+}
+
+package() {
+  cd "${srcdir}/${pkgname}"
+  install -Dm755 "${pkgname}" "${pkgdir}/usr/bin/${pkgname}"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+  install -Dm644 config.example.yaml "${pkgdir}/usr/share/doc/${pkgname}/config.example.yaml"
+  install -Dm644 packaging/systemd/immich-relay.service "${pkgdir}/usr/lib/systemd/user/immich-relay.service"
+}

@@ -1,0 +1,15 @@
+pkgbase = immich-relay-bin
+	pkgdesc = Prebuilt Immich Relay binary for Android ADB syncing
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/immich-relay/immich-relay
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	depends = android-tools
+	source_x86_64 = immich-relay-bin-0.1.0-x86_64.tar.gz::https://github.com/immich-relay/immich-relay/releases/download/v0.1.0/immich-relay_0.1.0_Linux_x86_64.tar.gz
+	sha256sums_x86_64 = SKIP
+	source_aarch64 = immich-relay-bin-0.1.0-aarch64.tar.gz::https://github.com/immich-relay/immich-relay/releases/download/v0.1.0/immich-relay_0.1.0_Linux_arm64.tar.gz
+	sha256sums_aarch64 = SKIP
+
+pkgname = immich-relay-bin

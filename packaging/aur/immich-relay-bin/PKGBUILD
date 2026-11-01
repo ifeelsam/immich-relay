@@ -1,0 +1,20 @@
+# Maintainer: Immich Relay contributors
+pkgname=immich-relay-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Prebuilt Immich Relay binary for Android ADB syncing'
+arch=('x86_64' 'aarch64')
+url='https://github.com/immich-relay/immich-relay'
+license=('MIT')
+depends=('android-tools')
+source_x86_64=("${pkgname}-${pkgver}-x86_64.tar.gz::${url}/releases/download/v${pkgver}/immich-relay_${pkgver}_Linux_x86_64.tar.gz")
+source_aarch64=("${pkgname}-${pkgver}-aarch64.tar.gz::${url}/releases/download/v${pkgver}/immich-relay_${pkgver}_Linux_arm64.tar.gz")
+# Replace SKIP with the appropriate value from checksums.txt before publishing.
+sha256sums_x86_64=('SKIP')
+sha256sums_aarch64=('SKIP')
+
+package() {
+  install -Dm755 immich-relay "${pkgdir}/usr/bin/immich-relay"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/immich-relay/LICENSE"
+  install -Dm644 README.md "${pkgdir}/usr/share/doc/immich-relay/README.md"
+}

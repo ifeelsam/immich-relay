@@ -126,11 +126,12 @@ func (c Config) Save(path string) error {
 }
 
 func (c Config) Validate() error {
-	if c.Immich.URL != "" {
-		u, err := url.ParseRequestURI(c.Immich.URL)
-		if err != nil || u.Scheme == "" || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
-			return errors.New("immich.url must be an absolute http(s) URL")
-		}
+	if c.Immich.URL == "" {
+		return errors.New("immich.url is required")
+	}
+	u, err := url.ParseRequestURI(c.Immich.URL)
+	if err != nil || u.Scheme == "" || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+		return errors.New("immich.url must be an absolute http(s) URL")
 	}
 	if c.Immich.APIKeyFile == "" {
 		return errors.New("immich.api_key_file is required")
@@ -168,6 +169,7 @@ func (c Config) Validate() error {
 }
 
 func ReadAPIKey(path string) (string, error) {
+	path = ExpandPath(path)
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("read Immich API key: %w", err)
@@ -180,6 +182,7 @@ func ReadAPIKey(path string) (string, error) {
 }
 
 func WriteAPIKey(path, key string) error {
+	path = ExpandPath(path)
 	key = strings.TrimSpace(key)
 	if key == "" {
 		return errors.New("Immich API key is empty")
@@ -188,4 +191,15 @@ func WriteAPIKey(path, key string) error {
 		return err
 	}
 	return os.WriteFile(path, []byte(key+"\n"), 0o600)
+}
+
+// ExpandPath supports the common configuration convention for a home-relative
+// credential path without making arbitrary shell expansion part of config.
+func ExpandPath(path string) string {
+	if path == "~" || strings.HasPrefix(path, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, strings.TrimPrefix(path, "~/"))
+		}
+	}
+	return path
 }

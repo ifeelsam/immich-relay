@@ -318,7 +318,10 @@ func (w *countingWriter) Write(p []byte) (int, error) {
 // CleanupBatch removes only database-tracked paths after an explicit user
 // confirmation. It never sends an Immich mutation.
 func (e *Engine) CleanupBatch(ctx context.Context, id string) (int, error) {
-	if err := e.validate(); err != nil {
+	if e.Store == nil || e.Device == nil {
+		return 0, errors.New("cleanup dependencies are not configured")
+	}
+	if err := e.Config.Validate(); err != nil {
 		return 0, err
 	}
 	assets, err := e.Store.ConfirmedPaths(ctx, id)

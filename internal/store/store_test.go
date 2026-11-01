@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -79,5 +80,37 @@ func TestConfirmationAndCleanupStateTransitions(t *testing.T) {
 	assets, err := s.List(ctx, string(model.StateLocalRemoved))
 	if err != nil || len(assets) != 1 {
 		t.Fatalf("List = %v, %v", assets, err)
+	}
+}
+
+func TestRetryLimitDoesNotHotLoopUntilManuallyRetried(t *testing.T) {
+	ctx := context.Background()
+	s, err := store.Open(filepath.Join(t.TempDir(), "relay.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	_, err = s.UpsertDiscovered(ctx, model.Asset{ID: "a1", OriginalName: "one.jpg", MIMEType: "image/jpeg", CreatedAt: time.Now()}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := s.NextTransfer(ctx, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.MarkFailed(ctx, a.ID, a.Attempts, 1, errors.New("permanent test failure")); err != nil {
+		t.Fatal(err)
+	}
+	next, err := s.NextTransfer(ctx, time.Now())
+	if err != nil || next != nil {
+		t.Fatalf("NextTransfer = %#v, %v", next, err)
+	}
+	n, err := s.RetryFailed(ctx)
+	if err != nil || n != 1 {
+		t.Fatalf("RetryFailed = %d, %v", n, err)
+	}
+	next, err = s.NextTransfer(ctx, time.Now())
+	if err != nil || next == nil {
+		t.Fatalf("manual retry NextTransfer = %#v, %v", next, err)
 	}
 }
