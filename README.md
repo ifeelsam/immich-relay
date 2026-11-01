@@ -33,6 +33,11 @@ No non-root Android mechanism can prove that Google Photos has uploaded every in
 
 The binary is standalone. ADB is intentionally the only external runtime dependency.
 
+For the full first-run guide—including local Immich URLs, Android storage
+paths, the curl installer, Arch USB permissions, and Wireless debugging—see
+[Setup and troubleshooting](docs/Setup-and-Troubleshooting.md) or the
+[GitHub Wiki](https://github.com/ifeelsam/immich-relay/wiki/Setup-and-troubleshooting).
+
 ## Install
 
 Download the matching archive from GitHub Releases, verify its published checksum, then install it:
