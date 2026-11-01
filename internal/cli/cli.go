@@ -197,6 +197,11 @@ func doctorCommand(o *options) *cobra.Command {
 		} else {
 			fmt.Fprintf(out, "✓ Queue database: %s\n", o.dbPath)
 		}
+		if state, err := service.UserStatus(cmd.Context()); err != nil {
+			fmt.Fprintf(out, "! systemd user service: %s (%v)\n", state, err)
+		} else {
+			fmt.Fprintf(out, "✓ systemd user service: %s\n", state)
+		}
 		return nil
 	}}
 }
@@ -228,6 +233,13 @@ func statusCommand(o *options) *cobra.Command {
 			}
 		}
 		fmt.Fprintf(out, "Unconfirmed batches: %d\n", outstanding)
+		if stamp, ok, err := r.store.GetSetting(cmd.Context(), "last_successful_sync_at"); err != nil {
+			return err
+		} else if ok {
+			fmt.Fprintf(out, "Last successful sync pass: %s\n", stamp)
+		} else {
+			fmt.Fprintln(out, "Last successful sync pass: never")
+		}
 		if storage, e := r.device.Storage(cmd.Context()); e != nil {
 			fmt.Fprintf(out, "Android: unavailable (%v)\n", e)
 		} else {
@@ -321,6 +333,18 @@ func queueCommand(o *options) *cobra.Command {
 			fmt.Fprintf(cmd.OutOrStdout(), "Requeued %d assets\n", n)
 		}
 		return err
+	}})
+	q.AddCommand(&cobra.Command{Use: "requeue <asset-id>", Short: "Explicitly retransmit a previously processed asset", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		s, err := openStore(o.dbPath)
+		if err != nil {
+			return err
+		}
+		defer s.Close()
+		if err := s.RequeueAsset(cmd.Context(), args[0]); err != nil {
+			return err
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), "Asset requeued for an explicit retransmission.")
+		return nil
 	}})
 	return q
 }

@@ -175,8 +175,33 @@ func (s *Store) RetryFailed(ctx context.Context) (int64, error) {
 	return res.RowsAffected()
 }
 
+// RequeueAsset is an explicit operator action for retransmitting a previously
+// handled item (including one removed by Smart Storage). It detaches the item
+// from any old batch so that past confirmation cannot authorize cleanup of a
+// new delivery.
+func (s *Store) RequeueAsset(ctx context.Context, id string) error {
+	res, err := s.db.ExecContext(ctx, `UPDATE assets SET state=?, destination_path='', local_path='', transfer_sha256='', batch_id='', next_retry_at=NULL, last_error='', updated_at=? WHERE id=? AND state IN (?, ?, ?, ?, ?, ?)`,
+		model.StateQueued, now(), id, model.StateFailed, model.StateIgnored, model.StateAwaitingBackupConfirmation, model.StateBackupConfirmed, model.StateLocalRemoved, model.StateQueued)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return fmt.Errorf("asset %q cannot be requeued while it is transferring or does not exist", id)
+	}
+	return nil
+}
+
 func (s *Store) CreateBatch(ctx context.Context, id string) error {
 	_, err := s.db.ExecContext(ctx, `INSERT INTO batches(id, created_at) VALUES (?, ?)`, id, now())
+	return err
+}
+
+func (s *Store) DeleteEmptyBatch(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM batches WHERE id=? AND NOT EXISTS (SELECT 1 FROM assets WHERE batch_id=?)`, id, id)
 	return err
 }
 

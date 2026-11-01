@@ -66,17 +66,16 @@ func (e *Engine) RunOnce(ctx context.Context, dryRun bool) (Report, error) {
 	}
 	report.AvailableBytes = storage.AvailableBytes
 	minimum := e.Config.Storage.MinFreeSpaceGB * gib
-	if storage.AvailableBytes <= minimum {
+	if e.Config.Storage.PauseWhenLow && storage.AvailableBytes <= minimum {
 		report.StorageLow = true
 		e.log().Warn("Android storage below configured reserve", "available_bytes", storage.AvailableBytes, "minimum_bytes", minimum)
-		return report, nil
+		return report, e.recordSuccessfulPass(ctx)
+	}
+	if !e.Config.Storage.PauseWhenLow {
+		minimum = 0
 	}
 
 	batchID := fmt.Sprintf("%s-%s", e.now().UTC().Format("20060102T150405Z"), randomSuffix())
-	if err := e.Store.CreateBatch(ctx, batchID); err != nil {
-		return report, err
-	}
-	report.BatchID = batchID
 	safeCapacity := storage.AvailableBytes - minimum
 	batchLimit := e.Config.Storage.MaxBatchSizeGB * gib
 	var batchBytes int64
@@ -94,6 +93,12 @@ func (e *Engine) RunOnce(ctx context.Context, dryRun bool) (Report, error) {
 			}
 			report.StorageLow = asset.ByteSize > safeCapacity
 			break
+		}
+		if report.BatchID == "" {
+			if err := e.Store.CreateBatch(ctx, batchID); err != nil {
+				return report, err
+			}
+			report.BatchID = batchID
 		}
 		outcome, bytes, err := e.transfer(ctx, *asset, batchID, safeCapacity-batchBytes)
 		if err != nil {
@@ -114,7 +119,13 @@ func (e *Engine) RunOnce(ctx context.Context, dryRun bool) (Report, error) {
 		batchBytes += bytes
 		report.Transferred++
 	}
-	return report, nil
+	if report.Transferred == 0 && report.BatchID != "" {
+		if err := e.Store.DeleteEmptyBatch(ctx, batchID); err != nil {
+			return report, err
+		}
+		report.BatchID = ""
+	}
+	return report, e.recordSuccessfulPass(ctx)
 }
 
 func (e *Engine) discover(ctx context.Context) (Report, error) {
@@ -358,6 +369,9 @@ func (e *Engine) validate() error {
 		return errors.New("cache directory is required")
 	}
 	return nil
+}
+func (e *Engine) recordSuccessfulPass(ctx context.Context) error {
+	return e.Store.SetSetting(ctx, "last_successful_sync_at", e.now().UTC().Format(time.RFC3339Nano))
 }
 func (e *Engine) now() time.Time {
 	if e.Now != nil {

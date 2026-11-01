@@ -122,7 +122,10 @@ func (c Config) Save(path string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, b, 0o600)
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0o600)
 }
 
 func (c Config) Validate() error {
@@ -190,7 +193,10 @@ func WriteAPIKey(path, key string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	return os.WriteFile(path, []byte(key+"\n"), 0o600)
+	if err := os.WriteFile(path, []byte(key+"\n"), 0o600); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0o600)
 }
 
 // ExpandPath supports the common configuration convention for a home-relative

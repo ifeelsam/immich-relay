@@ -114,3 +114,39 @@ func TestRetryLimitDoesNotHotLoopUntilManuallyRetried(t *testing.T) {
 		t.Fatalf("manual retry NextTransfer = %#v, %v", next, err)
 	}
 }
+
+func TestExplicitRequeueDetachesOldConfirmationBatch(t *testing.T) {
+	ctx := context.Background()
+	s, err := store.Open(filepath.Join(t.TempDir(), "relay.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if err := s.CreateBatch(ctx, "old-batch"); err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.UpsertDiscovered(ctx, model.Asset{ID: "a1", OriginalName: "one.jpg", MIMEType: "image/jpeg", CreatedAt: time.Now()}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := s.NextTransfer(ctx, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.MarkDelivered(ctx, a.ID, "/sdcard/DCIM/ImmichRelay/a1-one.jpg", "", "abc", "old-batch"); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.ConfirmBatch(ctx, "old-batch"); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.RequeueAsset(ctx, "a1"); err != nil {
+		t.Fatal(err)
+	}
+	queued, err := s.List(ctx, string(model.StateQueued))
+	if err != nil || len(queued) != 1 {
+		t.Fatalf("queued=%#v err=%v", queued, err)
+	}
+	if queued[0].BatchID != "" || queued[0].DestinationPath != "" {
+		t.Fatalf("old batch data persisted: %#v", queued[0])
+	}
+}

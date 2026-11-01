@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -124,6 +125,59 @@ func TestInterruptedDownloadIsRetriedWithoutFalseDelivery(t *testing.T) {
 	}
 }
 
+func TestChecksumMismatchIsNeverMarkedDelivered(t *testing.T) {
+	ctx := context.Background()
+	s, err := store.Open(filepath.Join(t.TempDir(), "relay.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	device := newFakeDevice(80 * gib)
+	device.badHash = true
+	e := newEngine(t, s, &fakeSource{assets: []model.Asset{asset("a1", "a.jpg", "image/jpeg", 3)}, data: map[string][]byte{"a1": []byte("abc")}}, device)
+	report, err := e.RunOnce(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Failed != 1 || report.Transferred != 0 {
+		t.Fatalf("report=%+v", report)
+	}
+	delivered, err := s.List(ctx, string(model.StateAwaitingBackupConfirmation))
+	if err != nil || len(delivered) != 0 {
+		t.Fatalf("delivered=%v err=%v", delivered, err)
+	}
+}
+
+func TestInterruptedADBPushIsRetryable(t *testing.T) {
+	ctx := context.Background()
+	s, err := store.Open(filepath.Join(t.TempDir(), "relay.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	device := newFakeDevice(80 * gib)
+	device.pushErr = errors.New("device disconnected")
+	e := newEngine(t, s, &fakeSource{assets: []model.Asset{asset("a1", "a.jpg", "image/jpeg", 3)}, data: map[string][]byte{"a1": []byte("abc")}}, device)
+	report, err := e.RunOnce(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Failed != 1 {
+		t.Fatalf("report=%+v", report)
+	}
+	if _, err := s.RetryFailed(ctx); err != nil {
+		t.Fatal(err)
+	}
+	device.pushErr = nil
+	report, err = e.RunOnce(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Transferred != 1 {
+		t.Fatalf("retry report=%+v", report)
+	}
+}
+
 const gib = int64(1024 * 1024 * 1024)
 
 func asset(id, name, mime string, size int64) model.Asset {
@@ -161,6 +215,8 @@ type fakeDevice struct {
 	storage model.StorageInfo
 	files   map[string][]byte
 	scanned []string
+	badHash bool
+	pushErr error
 }
 
 func newFakeDevice(available int64) *fakeDevice {
@@ -172,6 +228,9 @@ func (f *fakeDevice) Info(context.Context) (android.Info, error) {
 func (f *fakeDevice) Storage(context.Context) (model.StorageInfo, error) { return f.storage, nil }
 func (f *fakeDevice) EnsureDirectory(context.Context, string) error      { return nil }
 func (f *fakeDevice) PushAtomic(_ context.Context, local, destination string) error {
+	if f.pushErr != nil {
+		return f.pushErr
+	}
 	b, err := os.ReadFile(local)
 	if err != nil {
 		return err
@@ -188,6 +247,9 @@ func (f *fakeDevice) SHA256(_ context.Context, remote string) (string, bool, err
 		return "", true, errors.New("no such file")
 	}
 	h := sha256.Sum256(b)
+	if f.badHash {
+		return strings.Repeat("0", 64), true, nil
+	}
 	return hex.EncodeToString(h[:]), true, nil
 }
 func (f *fakeDevice) FileSize(_ context.Context, remote string) (int64, bool, error) {

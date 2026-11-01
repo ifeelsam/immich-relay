@@ -59,6 +59,20 @@ func InstallUser(ctx context.Context, binary, configPath, dbPath, adbBinary stri
 	return path, nil
 }
 
+// UserStatus deliberately returns systemctl's compact state (enabled,
+// disabled, static, or not-found) for doctor output. It does not modify a unit.
+func UserStatus(ctx context.Context) (string, error) {
+	output, err := exec.CommandContext(ctx, "systemctl", "--user", "is-enabled", UnitName).CombinedOutput()
+	state := strings.TrimSpace(string(output))
+	if state == "" {
+		state = "unknown"
+	}
+	if err != nil {
+		return state, err
+	}
+	return state, nil
+}
+
 func quote(value string) string {
 	// systemd command lines use POSIX-style quoting. The paths originate from
 	// local configuration and we reject newlines, which would alter the unit.

@@ -22,3 +22,17 @@ func TestConfigRequiresImmichURL(t *testing.T) {
 		t.Fatal("expected missing URL error")
 	}
 }
+
+func TestWriteAPIKeyUsesPrivatePermissions(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "api-key")
+	if err := WriteAPIKey(path, "secret"); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("permissions = %o", info.Mode().Perm())
+	}
+}

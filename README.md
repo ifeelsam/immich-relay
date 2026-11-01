@@ -126,6 +126,9 @@ immich-relay queue list
 # Retry errors immediately rather than waiting for exponential backoff
 immich-relay queue retry
 
+# Explicitly retransmit a previously handled item, for example after Smart Storage
+immich-relay queue requeue <immich-asset-id>
+
 # View the batches that await a real Google Photos check
 immich-relay batch list
 
