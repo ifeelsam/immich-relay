@@ -222,8 +222,12 @@ func (a *ADB) shell(ctx context.Context, command string) (string, error) {
 }
 
 func validateRemote(value string) error {
-	if !strings.HasPrefix(value, "/sdcard/") || strings.ContainsAny(value, "\n\r'\"`;$&|<>()") {
+	if strings.ContainsAny(value, "\n\r'\"`;$&|<>()") {
 		return errors.New("unsafe Android path")
+	}
+	clean := path.Clean(value)
+	if strings.TrimRight(value, "/") != clean || (!strings.HasPrefix(clean, "/sdcard/") && !strings.HasPrefix(clean, "/storage/emulated/0/")) {
+		return errors.New("Android path must be below /sdcard or /storage/emulated/0")
 	}
 	return nil
 }

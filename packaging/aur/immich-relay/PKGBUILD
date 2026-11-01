@@ -1,10 +1,10 @@
 # Maintainer: Immich Relay contributors
 pkgname=immich-relay
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc='Safely relay Immich originals to Android over ADB'
 arch=('x86_64' 'aarch64')
-url='https://github.com/immich-relay/immich-relay'
+url='https://github.com/ifeelsam/immich-relay'
 license=('MIT')
 depends=('android-tools')
 makedepends=('git' 'go')

@@ -31,7 +31,7 @@ nfpms:
     ids: [immich-relay]
     package_name: immich-relay
     vendor: Immich Relay contributors
-    homepage: https://github.com/immich-relay/immich-relay
+    homepage: https://github.com/ifeelsam/immich-relay
     maintainer: Immich Relay contributors
     description: Safely relay Immich originals to Android over ADB.
     license: MIT

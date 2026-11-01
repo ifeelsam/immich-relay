@@ -47,7 +47,7 @@ On Arch Linux (and other Linux distributions), the same static `x86_64` or
 user-local curl installer is also available:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ifeelsam/immich-relay/main/scripts/install.sh | sh -s -- 0.1.0
+curl -fsSL https://raw.githubusercontent.com/ifeelsam/immich-relay/main/scripts/install.sh | sh -s -- 0.1.1
 ```
 
 It installs to `~/.local/bin`; change that with `IMMICH_RELAY_PREFIX`. The
@@ -57,7 +57,7 @@ before installing it.
 For a development build, Go 1.26 or newer is required:
 
 ```bash
-git clone https://github.com/immich-relay/immich-relay.git
+git clone https://github.com/ifeelsam/immich-relay.git
 cd immich-relay
 go build -o immich-relay ./cmd/immich-relay
 ```
@@ -117,7 +117,7 @@ cleanup:
   use_smart_storage: false
 ```
 
-The destination must be below `/sdcard/`. Single-transfer concurrency is intentional: it makes the storage reserve and no-clobber behavior predictable.
+The default destination uses Android's `/sdcard/` alias. Relay also accepts the equivalent canonical internal-storage path, `/storage/emulated/0/...`; both refer to shared internal storage, not a removable SD card. Single-transfer concurrency is intentional: it makes the storage reserve and no-clobber behavior predictable.
 
 ## Everyday use
 

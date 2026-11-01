@@ -18,3 +18,16 @@ func TestManagedPathIsCollisionSafeAndRejectsUnsafeIDs(t *testing.T) {
 		t.Fatal("unsafe asset id accepted")
 	}
 }
+
+func TestManagedPathSupportsAndroidInternalStorageAlias(t *testing.T) {
+	p, err := ManagedPath("/storage/emulated/0/DCIM/ImmichRelay", "asset-one", "trip.jpg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p != "/storage/emulated/0/DCIM/ImmichRelay/asset-one-trip.jpg" {
+		t.Fatalf("path = %q", p)
+	}
+	if _, err := ManagedPath("/storage/emulated/0/DCIM/ImmichRelay/../../data", "asset-one", "trip.jpg"); err == nil {
+		t.Fatal("path traversal accepted")
+	}
+}

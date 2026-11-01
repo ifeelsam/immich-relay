@@ -23,6 +23,15 @@ func TestConfigRequiresImmichURL(t *testing.T) {
 	}
 }
 
+func TestConfigAllowsAndroidInternalStorageAlias(t *testing.T) {
+	c := Defaults()
+	c.Immich.URL = "https://photos.example.test"
+	c.Android.Destination = "/storage/emulated/0/DCIM/ImmichRelay"
+	if err := c.Validate(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestWriteAPIKeyUsesPrivatePermissions(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "api-key")
 	if err := WriteAPIKey(path, "secret"); err != nil {

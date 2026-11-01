@@ -1,15 +1,15 @@
 pkgbase = immich-relay
 	pkgdesc = Safely relay Immich originals to Android over ADB
-	pkgver = 0.1.0
+	pkgver = 0.1.1
 	pkgrel = 1
-	url = https://github.com/immich-relay/immich-relay
+	url = https://github.com/ifeelsam/immich-relay
 	arch = x86_64
 	arch = aarch64
 	license = MIT
 	makedepends = git
 	makedepends = go
 	depends = android-tools
-	source = git+https://github.com/immich-relay/immich-relay.git#tag=v0.1.0
+	source = git+https://github.com/ifeelsam/immich-relay.git#tag=v0.1.1
 	b2sums = SKIP
 
 pkgname = immich-relay

@@ -1,9 +1,9 @@
 #!/bin/sh
 # Install a published Immich Relay Linux release for the current architecture.
-# Usage: curl -fsSL https://raw.githubusercontent.com/immich-relay/immich-relay/main/scripts/install.sh | sh -s -- 0.1.0
+# Usage: curl -fsSL https://raw.githubusercontent.com/ifeelsam/immich-relay/main/scripts/install.sh | sh -s -- 0.1.1
 set -eu
 
-version="${1:-${IMMICH_RELAY_VERSION:-0.1.0}}"
+version="${1:-${IMMICH_RELAY_VERSION:-0.1.1}}"
 repo="${IMMICH_RELAY_REPO:-ifeelsam/immich-relay}"
 prefix="${IMMICH_RELAY_PREFIX:-$HOME/.local}"
 

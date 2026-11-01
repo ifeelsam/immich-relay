@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -139,8 +140,8 @@ func (c Config) Validate() error {
 	if c.Immich.APIKeyFile == "" {
 		return errors.New("immich.api_key_file is required")
 	}
-	if !strings.HasPrefix(c.Android.Destination, "/sdcard/") || strings.ContainsAny(c.Android.Destination, "\n\r'\"`;") {
-		return errors.New("android.destination must be a safe absolute path below /sdcard")
+	if !safeAndroidDestination(c.Android.Destination) {
+		return errors.New("android.destination must be a safe path below /sdcard or /storage/emulated/0")
 	}
 	if c.Sync.TransferConcurrency != 1 {
 		return errors.New("sync.transfer_concurrency must be 1 in this release to respect phone storage limits")
@@ -208,4 +209,15 @@ func ExpandPath(path string) string {
 		}
 	}
 	return path
+}
+
+func safeAndroidDestination(destination string) bool {
+	if strings.ContainsAny(destination, "\n\r'\"`;|&<>()") {
+		return false
+	}
+	clean := path.Clean(destination)
+	if strings.TrimRight(destination, "/") != clean {
+		return false
+	}
+	return strings.HasPrefix(clean, "/sdcard/") || strings.HasPrefix(clean, "/storage/emulated/0/")
 }
