@@ -1,0 +1,8 @@
+# Build outputs
+/dist/
+/immich-relay
+/coverage.out
+
+# Local development state
+/.env
+/.tmp/
