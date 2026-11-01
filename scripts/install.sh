@@ -4,7 +4,7 @@
 set -eu
 
 version="${1:-${IMMICH_RELAY_VERSION:-0.1.0}}"
-repo="${IMMICH_RELAY_REPO:-immich-relay/immich-relay}"
+repo="${IMMICH_RELAY_REPO:-ifeelsam/immich-relay}"
 prefix="${IMMICH_RELAY_PREFIX:-$HOME/.local}"
 
 case "$(uname -s)" in
